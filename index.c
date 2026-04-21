@@ -172,6 +172,7 @@ int index_load(Index *idx) {
 //   - rename                           : atomically moving the temp file over the old index
 //
 // Returns 0 on success, -1 on error.
+// Saves index atomically
 int index_save(const Index *idx) {
 
     FILE *fp = fopen(".pes/index.tmp", "w");
