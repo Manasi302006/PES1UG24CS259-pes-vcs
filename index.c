@@ -135,14 +135,28 @@ int index_status(const Index *index) {
 //
 // Returns 0 on success, -1 on error.
 int index_load(Index *idx) {
-    FILE *fp = fopen(".pes/index", "rb");
-    if (!fp) {
-        idx->count = 0; // no index yet
-        return 0;
-    }
+    FILE *fp = fopen(".pes/index", "r");
 
-    fread(&idx->count, sizeof(int), 1, fp);
-    fread(idx->entries, sizeof(IndexEntry), idx->count, fp);
+    idx->count = 0;
+
+    if (!fp) return 0; // empty index
+
+    while (idx->count < MAX_INDEX_ENTRIES) {
+        IndexEntry *e = &idx->entries[idx->count];
+
+        char hash_hex[HASH_HEX_SIZE + 1];
+
+        if (fscanf(fp, "%o %s %ld %zu %[^\n]\n",
+                   &e->mode,
+                   hash_hex,
+                   &e->mtime_sec,
+                   &e->size,
+                   e->path) != 5) break;
+
+        hex_to_hash(hash_hex, &e->hash);
+
+        idx->count++;
+    }
 
     fclose(fp);
     return 0;
@@ -158,16 +172,30 @@ int index_load(Index *idx) {
 //
 // Returns 0 on success, -1 on error.
 int index_save(const Index *idx) {
-    FILE *fp = fopen(".pes/index", "wb");
+
+    FILE *fp = fopen(".pes/index.tmp", "w");
     if (!fp) return -1;
 
-    fwrite(&idx->count, sizeof(int), 1, fp);
-    fwrite(idx->entries, sizeof(IndexEntry), idx->count, fp);
+    for (int i = 0; i < idx->count; i++) {
+        char hash_hex[HASH_HEX_SIZE + 1];
+        hash_to_hex(&idx->entries[i].hash, hash_hex);
 
+        fprintf(fp, "%o %s %lu %u %s\n",
+                idx->entries[i].mode,
+                hash_hex,
+                idx->entries[i].mtime_sec,
+                idx->entries[i].size,
+                idx->entries[i].path);
+    }
+
+    fflush(fp);
+    fsync(fileno(fp));
     fclose(fp);
+
+    rename(".pes/index.tmp", ".pes/index");
+
     return 0;
 }
-
 // Stage a file for the next commit.
 //
 // HINTS - Useful functions and syscalls:
@@ -177,6 +205,8 @@ int index_save(const Index *idx) {
 //   - index_find                       : checking if the file is already staged
 //
 // Returns 0 on success, -1 on error.
+
+
 int index_add(Index *idx, const char *path) {
 
     FILE *fp = fopen(path, "rb");
@@ -186,21 +216,32 @@ int index_add(Index *idx, const char *path) {
     size_t size = ftell(fp);
     rewind(fp);
 
-    char *buffer = malloc(size);
-    fread(buffer, 1, size, fp);
+    char *data = malloc(size);
+    fread(data, 1, size, fp);
     fclose(fp);
 
     ObjectID id;
-    if (object_write(OBJ_BLOB, buffer, size, &id) != 0) {
-        free(buffer);
-        return -1;
+    object_write(OBJ_BLOB, data, size, &id);
+    free(data);
+
+    struct stat st;
+    stat(path, &st);
+
+    
+    IndexEntry *e = index_find(idx, path);
+
+    if (e == NULL) {
+        // Add new entry
+        e = &idx->entries[idx->count];
+        idx->count++;   
     }
 
-    free(buffer);
-
-    IndexEntry *e = &idx->entries[idx->count++];
     strcpy(e->path, path);
+    e->mode = st.st_mode;
+    e->mtime_sec = st.st_mtime;
+    e->size = size;
     e->hash = id;
 
-    return 0;
+    // Save to file
+    return index_save(idx);
 }
