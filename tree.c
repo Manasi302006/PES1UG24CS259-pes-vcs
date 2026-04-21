@@ -1,5 +1,5 @@
 // tree.c — Tree object serialization and construction
-//
+// Phase 2: Tree system implementation
 // PROVIDED functions: get_file_mode, tree_parse, tree_serialize
 // TODO functions:     tree_from_index
 //
