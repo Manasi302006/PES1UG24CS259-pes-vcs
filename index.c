@@ -52,7 +52,7 @@ int index_remove(Index *index, const char *path) {
     fprintf(stderr, "error: '%s' is not in the index\n", path);
     return -1;
 }
-
+// Loads index from file
 // Print the status of the working directory.
 //
 // Identifies files that are staged, unstaged (modified/deleted in working dir),
