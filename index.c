@@ -1,3 +1,4 @@
+// Phase 3: Index system
 // index.c — Staging area implementation
 //
 // Text format of .pes/index (one entry per line, sorted by path):
