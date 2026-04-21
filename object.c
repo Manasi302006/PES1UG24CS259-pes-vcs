@@ -65,7 +65,7 @@ int object_exists(const ObjectID *id) {
 
 // Write an object to the store.
 //
-
+// Handles writing objects to .pes/objects
 int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out) {
 
     // Step 1: Create header
