@@ -14,7 +14,7 @@
 //
 // PROVIDED functions: index_find, index_remove, index_status
 // TODO functions:     index_load, index_save, index_add
-
+#include "pes.h"
 #include "index.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -134,13 +134,19 @@ int index_status(const Index *index) {
 //   - hex_to_hash                      : converting the parsed string to ObjectID
 //
 // Returns 0 on success, -1 on error.
-int index_load(Index *index) {
-    // TODO: Implement index loading
-    // (See Lab Appendix for logical steps)
-    (void)index;
-    return -1;
-}
+int index_load(Index *idx) {
+    FILE *fp = fopen(".pes/index", "rb");
+    if (!fp) {
+        idx->count = 0; // no index yet
+        return 0;
+    }
 
+    fread(&idx->count, sizeof(int), 1, fp);
+    fread(idx->entries, sizeof(IndexEntry), idx->count, fp);
+
+    fclose(fp);
+    return 0;
+}
 // Save the index to .pes/index atomically.
 //
 // HINTS - Useful functions and syscalls:
@@ -151,11 +157,15 @@ int index_load(Index *index) {
 //   - rename                           : atomically moving the temp file over the old index
 //
 // Returns 0 on success, -1 on error.
-int index_save(const Index *index) {
-    // TODO: Implement atomic index saving
-    // (See Lab Appendix for logical steps)
-    (void)index;
-    return -1;
+int index_save(const Index *idx) {
+    FILE *fp = fopen(".pes/index", "wb");
+    if (!fp) return -1;
+
+    fwrite(&idx->count, sizeof(int), 1, fp);
+    fwrite(idx->entries, sizeof(IndexEntry), idx->count, fp);
+
+    fclose(fp);
+    return 0;
 }
 
 // Stage a file for the next commit.
@@ -167,9 +177,30 @@ int index_save(const Index *index) {
 //   - index_find                       : checking if the file is already staged
 //
 // Returns 0 on success, -1 on error.
-int index_add(Index *index, const char *path) {
-    // TODO: Implement file staging
-    // (See Lab Appendix for logical steps)
-    (void)index; (void)path;
-    return -1;
+int index_add(Index *idx, const char *path) {
+
+    FILE *fp = fopen(path, "rb");
+    if (!fp) return -1;
+
+    fseek(fp, 0, SEEK_END);
+    size_t size = ftell(fp);
+    rewind(fp);
+
+    char *buffer = malloc(size);
+    fread(buffer, 1, size, fp);
+    fclose(fp);
+
+    ObjectID id;
+    if (object_write(OBJ_BLOB, buffer, size, &id) != 0) {
+        free(buffer);
+        return -1;
+    }
+
+    free(buffer);
+
+    IndexEntry *e = &idx->entries[idx->count++];
+    strcpy(e->path, path);
+    e->hash = id;
+
+    return 0;
 }
