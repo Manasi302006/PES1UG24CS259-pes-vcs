@@ -247,3 +247,4 @@ int index_add(Index *idx, const char *path) {
     // Save to file
     return index_save(idx);
 }
+// Index system complete
