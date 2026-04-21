@@ -146,7 +146,7 @@ int head_read(ObjectID *id_out) {
     }
     return hex_to_hash(line, id_out);
 }
-
+//Updates HEAD reference
 // Update the current branch ref to point to a new commit atomically.
 int head_update(const ObjectID *new_commit) {
     FILE *f = fopen(HEAD_FILE, "r");
