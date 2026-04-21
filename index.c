@@ -208,7 +208,7 @@ int index_save(const Index *idx) {
 //
 // Returns 0 on success, -1 on error.
 
-
+// Adds files to index
 int index_add(Index *idx, const char *path) {
 
     FILE *fp = fopen(path, "rb");
